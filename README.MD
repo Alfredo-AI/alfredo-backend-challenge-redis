@@ -61,9 +61,7 @@ Each _Redis_ database entry will have a unique `property_id` key matching to a _
     "price": NumericField,
     "grossArea": NumericField,
     "numberOfRooms": NumericField,
-    "lastVisit": NumericField,
-    "lnglat": GeoField,
-    "subFeatures": TagField
+    "enteredMarket": NumericField
 }
 ```
 
@@ -74,7 +72,6 @@ Each _Redis_ database entry will have a unique `property_id` key matching to a _
 - `grossArea`: The property's gross area.
 - `numberOfRooms`: The property's number of rooms.
 - `enteredMarket`: Datetime of when the property entered the market, encoded as an integer.
-- `lnglat`: The property's coordinates, stored as: '**\<longitude>,\<latitude>**'.
 
 You can follow [this](https://redis-py.readthedocs.io/en/stable/redismodules.html#redisearch-commands) example from the `Redis` `Python` client, on how to create a new index.
 
@@ -100,7 +97,9 @@ We will use the [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) li
 
 `POST /metrics`
 
-This endpoint will receive a payload of property filters, which we will use to filter through our databse.
+This endpoint will receive a [payload](https://fastapi.tiangolo.com/tutorial/schema-extra-example/) of property filters, which we will use to filter through our databse.
+
+For example:
 
 ```json
 {
@@ -109,16 +108,24 @@ This endpoint will receive a payload of property filters, which we will use to f
   "grossArea": {
     "min": 50,
     "max": 100
+  },
+  "enteredMarket": {
+    "min": "2023-10-20"
   }
 }
 ```
+
+As we can observe, we want to be able to query in several different fashions.
+
+- **Categorical** fields (`addType`, `assetType`, `county`, `numberOfRooms`) - can be queried by a single or multiple values. Represented by the value itself or an array of values.
+- **Continuous** fields (`price`, `grossArea`, `enteredMarket`) - can be queried by a range of values. Represented by a dictionary (object), with two possible minimum/maximum keys.
 
 After doing so we want to use [_Redis_ aggregate funcions](https://redis.io/docs/interact/search-and-query/search/aggregations/) to calculate the following metrics:
 
 - Average grossArea:
 - Median Price
-- Most common asset type.
-- Number of rooms histogram (bar graph).
+- Total number of rooms.
+- Number of rooms bar graph.
 
 **Hint:** Take a look at this [example](https://redis.io/docs/connect/clients/python/#example-indexing-and-querying-json-documents). It uses the _Redis_ _Python_ client to, among other things, perform aggregate functions.
 
@@ -136,7 +143,7 @@ We want the endpoint's [response model](https://fastapi.tiangolo.com/tutorial/re
     "type": "indicator",
     "unit": "€"
   },
-  "mostCommonAssetType": {
+  "totalCount": {
     "data": "<value>",
     "type": "indicator",
     "unit": ""
