@@ -180,3 +180,4 @@ We want the endpoint's [response model](https://fastapi.tiangolo.com/tutorial/re
 - Try to keep functions as suscint as possible. Remember: 2 small functions are better than 1 larger one.
 - Avoid function nesting as much as you can. Keeping code "depth" to 2/3 functions deep makes debugging easier.
 - [Type hints](https://docs.python.org/3/library/typing.html) are not only helpful for code reading but also for code writing. They enhance your IDE's IntelliSense/Autocomplete abilities.
+- Commit your code (very) often and with descriptive messages. Multiple very small commits are always better that one giant one. If something goes wrong it's easier to revert.
