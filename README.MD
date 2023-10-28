@@ -1,11 +1,11 @@
-# Alfredo Backend Challenge 2
+# Alfredo Backend Challenge
 
 This challenge consists of building a _Redis_ database and using it to calculate several useful metrics on the real estate market. The user will access these metrics through a _REST_ API endpoint, built on the _FastAPI_ library.
 
 To do that you will have to follow these steps:
 
 1. Create a _Redis_ database, and add an index with the schema mentioned below.
-2. Load the JSON file located in the `/data` directory and add the entries inside to the database.
+2. Load the JSON file and add the entries inside to the database (you can access the JSON file [here](https://backend-challenge.s3.fr-par.scw.cloud/data.json)
 3. Create a basic _FastAPI_ backend, with a single `POST /metrics` endpoint, that calculates the metrics specified below and returns them to the user.
 
 These steps will be explained in further detail in the sections below.
@@ -85,13 +85,13 @@ client = Redis(decode_responses=True, protocol=3)
 
 ## 2. Load JSON file
 
-The dataset is stored in the `dataset.json` file, located in the `/data` directory. We want to create Python logic to load it into a variable, process it, and upload it into our _Redis_ database.
+The dataset is stored in the `data.json` file, located [here](https://backend-challenge.s3.fr-par.scw.cloud/data.json). We want to create Python logic to load it into a variable, process it, and upload it into our _Redis_ database.
 
 Split each of these steps into multiple _Python_ functions and store them in the `utils.py` file.
 
 ## 3. FastAPI backend
 
-With our databse loaded and ready to go, we want to create a backend to access it and return information to our users.
+With our database loaded and ready to go, we want to create a backend to access it and return information to our users.
 
 We will use the [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) library to build a REST API. This will be comprised of a single endpoint:
 
