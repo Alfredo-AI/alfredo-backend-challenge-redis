@@ -31,39 +31,36 @@ def create_index():
 
 def load_property_data():
 
-  with open('/home/leon/Desktop/data2.json', 'r') as file:
+  with open('/home/leon/Desktop/data.json', 'r') as file:
     p_data = json.load(file)
 
+  
   return p_data
 
 
-def redis_set_property_data(d):
-  property_UID =0
-  
+def redis_set_property_data(c,d):
+  property_UID = 0
+  property_key = 'PROPERTY_KEY_'
+  pipeline = c.pipeline(transaction = False)
 
   for property in d:
-    property_UID =+1
-    pipeline.json().set(property_UID, '$', property)
+    property_UID += 1
+    property_key = f"{property_key}{property_UID}"
+    pipeline.json().set(property_key, '$', property)
+    property_key = 'PROPERTY_KEY_'
+
+  pipeline.execute()
   
-  
+ 
 
 
-### start
+
 client = redis.Redis(decode_responses=True, protocol=3)
 
 #create_index()
-pipeline = client.pipeline(transaction = False)
 property_data = load_property_data()
-redis_set_property_data(property_data)
-pipeline.execute()
+redis_set_property_data(client,property_data)
 
 
 
-'''
-property_UID = 0
-for property in property_data:
-  property_UID += 1
-  pipeline.json().set(property_UID, "$", property)
 
-pipeline.execute()
-'''
