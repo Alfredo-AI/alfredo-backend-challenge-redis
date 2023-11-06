@@ -33,9 +33,10 @@ def load_property_data():
 
   with open('/home/leon/Desktop/data.json', 'r') as file:
     p_data = json.load(file)
+    client = redis.Redis(decode_responses=True, protocol=3)
 
   
-  return p_data
+  return p_data, client
 
 
 def redis_set_property_data(c,d):
@@ -51,15 +52,12 @@ def redis_set_property_data(c,d):
 
   pipeline.execute()
   
- 
 
 
-
-client = redis.Redis(decode_responses=True, protocol=3)
 
 #create_index()
-property_data = load_property_data()
-redis_set_property_data(client,property_data)
+#property_data = load_property_data()
+#redis_set_property_data(client,property_data)
 
 
 

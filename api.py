@@ -54,26 +54,38 @@ def property_in_type(property_id: int, property: Property):
     county_search_full = property.county.split(",")
     numberOfRooms_search_full = property.numberOfRooms.split(",")
     
-
     addType_search_clause = ""
     assetType_search_clause = ""
+    county_search_clause = ""
+    numberOfRooms_search_clause = ""
+
 
     for addType_search in addType_search_full:
-        addType_search_clause = f"{addType_search_clause} @:addType {{{addType_search}}}"
+        addType_search_clause = f"{addType_search_clause} @addType:{{{addType_search}}}"
 
     for assetType_search in assetType_search_full:
-        assetType_search_clause = f"{assetType_search_clause} @:assetype {{{assetType_search}}}"
+        assetType_search_clause = f"{assetType_search_clause} @assetype:{{{assetType_search}}}"
 
     for county_search in county_search_full:
-        county_search_clause = f"{county_search_clause} @:county {{{county_search}}}"
+        county_search_clause = f"{county_search_clause} @county:{{{county_search}}}"
 
-    for county_search in county_search_full:
-        county_search_clause = f"{county_search_clause} @:county {{{county_search}}}"
+    for numberOfRooms_search in numberOfRooms_search_full:
+        numberOfRooms_search_clause = f"{numberOfRooms_search_clause} @numberOfRooms: {{{numberOfRooms_search}}}"
 
+    enteredMarket_search_clase = f"@enteredMarket:[{property.}] "
 
-    addType_search_result = client.ft("property_index_json").search(
-        Query()
+    search_result = client.ft("property_index_json").search(
+        Query(f"{addType_search_clause} {assetType_search_clause} {county_search_clause} {numberOfRooms_search_clause}")
     )
+
+    search_values = []
+
+    for doc in search_result.docs:
+        search_values.append(json.loads(doc["json"]))
+
+    return {"data":    }
+
+
 
 def metrics():
 
