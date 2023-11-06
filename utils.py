@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 
 def create_index():
+  client = redis.Redis(decode_responses=True, protocol=3)
   client.ft("property_index_json").create_index(
   [
       TextField("$.addType", as_name = "addType"),
@@ -26,17 +27,16 @@ def create_index():
   ],
   definition = IndexDefinition(
     index_type = IndexType.JSON
-  )
+  )  
 )
+  return client
 
 def load_property_data():
 
-  with open('/home/leon/Desktop/data.json', 'r') as file:
+  with open('/home/leon/Desktop/data2.json', 'r') as file:
     p_data = json.load(file)
-    client = redis.Redis(decode_responses=True, protocol=3)
-
-  
-  return p_data, client
+      
+  return p_data
 
 
 def redis_set_property_data(c,d):
@@ -47,17 +47,26 @@ def redis_set_property_data(c,d):
   for property in d:
     property_UID += 1
     property_key = f"{property_key}{property_UID}"
-    pipeline.json().set(property_key, '$', property)
+    
+    new_property = dict(
+      addType= property["addType"], 
+      assetType= property["assetType"], 
+      county= property["county"], 
+      price= property["price"], 
+      grossArea=property["grossArea"], 
+      numberOfRooms= property["numberOfRooms"], 
+      enteredMarket= property["enteredMarket"]
+    )  
+
+    pipeline.json().set(property_key, '$', new_property)
     property_key = 'PROPERTY_KEY_'
 
   pipeline.execute()
   
 
-
-
-#create_index()
-#property_data = load_property_data()
-#redis_set_property_data(client,property_data)
+client = create_index()
+property_data = load_property_data()
+redis_set_property_data(client,property_data)
 
 
 
