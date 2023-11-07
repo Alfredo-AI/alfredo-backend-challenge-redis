@@ -19,7 +19,7 @@ class Property(BaseModel):
    
     addType: str 
     assetType: str | list[str]
-    county: str #| list[str]
+    county: str | list[str]
     price: dict
     grossArea: dict
     enteredMarket: dict
@@ -36,11 +36,9 @@ app = FastAPI()
 @app.post("/metrics")
 def property_in_type(property: Property):
 
-    #s_clause = make_search_clause()
     rs = client.ft("property_index_json")
     
-
-    #clause constructor
+    '''---#==CLAUSE CONSTRUCTOR==#---'''
     assetType_clause = string_or_list(property.assetType)
     county_clause = string_or_list(property.county)
     p_min = property.price["min"]
@@ -53,14 +51,14 @@ def property_in_type(property: Property):
     search_clause=(f" @addType: {property.addType} @assetType: {assetType_clause} @county:{county_clause} @price:[{p_min} {p_max}] @grossArea:[{gA_min} {gA_max}] @enteredMarket:[{date_min} {date_max}]")
 
     
-    
     '''
-    ####-----QUERY: in case we just want to query-----###
+    ####---#==QUERY==#---###
 
     query_result = client.ft("property_index_json").search(
         Query(search_clause))
     '''
     
+
     '''---#==METRICS==#---'''
     #avgGrossArea  ----  
     request_avgArea = AggregateRequest(search_clause).group_by([], reducers.avg('@grossArea').alias("Average Gross Area"))
@@ -69,6 +67,7 @@ def property_in_type(property: Property):
     d_avgArea = result_avgArea["results"][0]
     #o resultado e:
     avg_area_metric = d_avgArea["extra_attributes"]
+    #avg_area_dic = {"data": "avg_area_metric"}
 
 
     #median price  ----
@@ -83,7 +82,12 @@ def property_in_type(property: Property):
     query_result = client.ft("property_index_json").search(Query(search_clause))
     total_count = query_result["total_results"]
 
-    return total_count
+    ###rooms and county ----
+    #number of rooms andd county
+    request_roomCount = AggregateRequest(search_clause).group_by(['@numberOfRooms','@county'], reducers.count().alias("Total"))
+    result_roomCount = rs.aggregate(request_roomCount)
+
+    return result_roomCount
 
 
 
@@ -113,43 +117,8 @@ def unix_date_time_search(propertydatefield):
 # }
 
 
-#number of rooms andd county
-#request = AggregateRequest(search_clause).group_by(['@numberOfRooms','@county'], reducers.count().alias("rooms"))
-
-
 #request = AggregateRequest(clause).group_by([], reducers.max('@price').alias("max price"))
-
-
 
 #group by room
 #request = AggregateRequest('*').group_by([], reducers.count("@price").alias("max price"))
-
-#average grossArea
-#
-
-
-#procura e total count
-
-    #result = rs.search(
-    #    Query("house")
-    #)
-
-
-    # total_count
-    #total_count = result["total_results"]
-
-
-
-#aggregate max price
-#rs = client.ft("property_index_json")
-   
-    
-    #request = AggregateRequest('*').group_by([], reducers.max("@price").alias("max price"))
-
-    #result = rs.aggregate(request)
-    
-
-    #return result
-
-
 
