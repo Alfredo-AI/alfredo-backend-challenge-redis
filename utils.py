@@ -65,6 +65,12 @@ def redis_set_property_data(c,d):
   pipeline.execute()
   
 
+def unix_date_time_search(propertydatefield):
+    datetime_property = datetime.strptime(propertydatefield, '%Y-%m-%d')
+    return datetime_property.timestamp()
+  
+        
+        
 def unix_date_time(propertydatefield):
   datetime_str = propertydatefield['enteredMarket'].split("+",1)
   try:
@@ -75,7 +81,6 @@ def unix_date_time(propertydatefield):
       datetime_property = datetime.strptime(datetime_str[0], '%Y-%m-%d %H:%M:%S')
       return datetime_property.timestamp()
     
-
 client = create_index()
 property_data = load_property_data()
 redis_set_property_data(client,property_data)
