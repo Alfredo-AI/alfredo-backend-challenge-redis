@@ -19,24 +19,6 @@ class Property(BaseModel):
     numberOfRooms: int
     enteredMarket: float
 
-    model_config = {
-        "json_schema": {
-            "examples" : [
-                {
-                    "addType": "sell",
-                    "assetType": ["apartment", "house"],
-                    "grossArea": {
-                        "min": 50,
-                        "max": 100
-                                },
-                    "enteredMarket": {
-                    "min": "2023-10-20"
-                    }
-
-                }
-            ]  
-        }
-    }
 
 
 #connect to redis
