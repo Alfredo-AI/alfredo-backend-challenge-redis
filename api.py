@@ -1,20 +1,21 @@
 # YOUR API HERE
 from ast import List
 from functools import reduce
-from re import S
+from re import S, search
 from fastapi import FastAPI
 from pydantic import BaseModel
 import redis.commands.search.aggregation as aggregations
 import redis.commands.search.reducers as reducers
-from redis.commands.search.aggregation import AggregateRequest
+from redis.commands.search.aggregation import AggregateRequest, Asc
 from redis.commands.search.query import Query
 from redis.exceptions import ResponseError
 #from utils import unix_date_time_search
+
 import json
 import redis
 from datetime import datetime
 
-
+'''---#==CREATE PAYLOAD==#---'''
 class Property(BaseModel):
    
     addType: str 
@@ -22,25 +23,29 @@ class Property(BaseModel):
     county: str | list[str]
     price: dict
     grossArea: dict
+    #numberOfRooms: str | list[str]
     enteredMarket: dict
-    #numberOfRooms: str
 
 
-#connect to redis
+'''---#==CONNECT TO REDIS==#---'''
 client = redis.Redis(decode_responses=True, protocol=3)
+
 
 #start API application
 app = FastAPI()
 
-#@app.post("/metrics")
+#create API path operation decorator
 @app.post("/metrics")
 def property_in_type(property: Property):
 
+    #load index to search by
     rs = client.ft("property_index_json")
     
+
     '''---#==CLAUSE CONSTRUCTOR==#---'''
     assetType_clause = string_or_list(property.assetType)
     county_clause = string_or_list(property.county)
+    #numberOfRooms_clause = string_or_list(property.numberOfRooms)
     p_min = property.price["min"]
     p_max = property.price["max"]
     gA_min = property.grossArea["min"]
@@ -48,50 +53,28 @@ def property_in_type(property: Property):
     date_min = unix_date_time_search(property.enteredMarket["min"])
     date_max = unix_date_time_search(property.enteredMarket["max"])
 
-    search_clause=(f" @addType: {property.addType} @assetType: {assetType_clause} @county:{county_clause} @price:[{p_min} {p_max}] @grossArea:[{gA_min} {gA_max}] @enteredMarket:[{date_min} {date_max}]")
+    #@numberOfRooms: {numberOfRooms_clause}
+    search_clause=(f" @addType: {property.addType} @assetType: {assetType_clause} @county:{county_clause} @price:[{p_min} {p_max}] @grossArea:[{gA_min} {gA_max}]  @enteredMarket:[{date_min} {date_max}]")
 
     
-    '''
-    ####---#==QUERY==#---###
-
+    '''####---#==QUERY==#---###
     query_result = client.ft("property_index_json").search(
         Query(search_clause))
     '''
     
 
     '''---#==METRICS==#---'''
-    #avgGrossArea  ----  
-    request_avgArea = AggregateRequest(search_clause).group_by([], reducers.avg('@grossArea').alias("Average Gross Area"))
-    result_avgArea = rs.aggregate(request_avgArea)
-    #isto e um dict
-    d_avgArea = result_avgArea["results"][0]
-    #o resultado e:
-    avg_area_metric = d_avgArea["extra_attributes"]
-    #avg_area_dic = {"data": "avg_area_metric"}
+    #Average GrossArea metric ----  
+    median_price = calculate_median_price(rs, search_clause)
+    average_area = calculate_average_area(rs, search_clause)
+    total_count = calculate_total_count(rs, search_clause)
+    rooms_county = calculate_rooms_and_county(rs, search_clause)
+  
+    metrics = print_metrics(average_area["Average Gross Area"], median_price["Median price"], total_count)
+    
+    return metrics, rooms_county
 
-
-    #median price  ----
-    request_medPrice = AggregateRequest(search_clause).group_by([], reducers.quantile('@price', '0.5').alias("Median price"))
-    result_medPrice = rs.aggregate(request_medPrice)
-    #isto e um dict
-    d_medPrice = result_medPrice["results"][0]
-    #o resultado e:
-    medPrice_metric = d_medPrice["extra_attributes"]
-
-    ###total count ----
-    query_result = client.ft("property_index_json").search(Query(search_clause))
-    total_count = query_result["total_results"]
-
-    ###rooms and county ----
-    #number of rooms andd county
-    request_roomCount = AggregateRequest(search_clause).group_by(['@numberOfRooms','@county'], reducers.count().alias("Total"))
-    result_roomCount = rs.aggregate(request_roomCount)
-
-    return result_roomCount
-
-
-
-    #request = AggregateRequest(clause).group_by(['@price'], reducers.count().alias(""))
+# convert to string if its a list of strings
 def string_or_list(input):
     if isinstance(input, str):
         return input
@@ -100,25 +83,69 @@ def string_or_list(input):
     else:
         return 'Null'
     
+# convert search date into unix to query
 def unix_date_time_search(propertydatefield):
     datetime_property = datetime.strptime(propertydatefield, '%Y-%m-%d')
     return datetime_property.timestamp()
        
+# populate dictionary with metrics attained from query/aggregate
+def print_metrics(area,price,roomcount):
+    results = {
+                "avgArea": {
+                    "data": area,
+                    "type": "indicator",
+                    "unit": "m²"
+                },
+                "medianPrice": {
+                    "data": price,
+                    "type": "indicator",
+                    "unit": "€"
+                },
+                "totalCount": {
+                    "data": roomcount,
+                    "type": "indicator",
+                    "unit": ""
+                }
+        }
+    return results
 
-#return
-#return {
-#           "avgArea": {
-#           "data": "<value>",
-#           "type": "indicator",
-#           "unit": "m2"
-# },
-#
-#
-# }
+#Median Price metric ----  
+def calculate_median_price(client, clause):
+    request = AggregateRequest(clause).group_by([], reducers.quantile('@price', '0.5').alias("Median price"))
+    result = client.aggregate(request)
 
+    #extract result from nested dictionary
+    d_result = result["results"][0]
+    median_price = d_result["extra_attributes"]
 
-#request = AggregateRequest(clause).group_by([], reducers.max('@price').alias("max price"))
+    return median_price
 
-#group by room
-#request = AggregateRequest('*').group_by([], reducers.count("@price").alias("max price"))
+#Average GrossArea metric calculator ----  
+def calculate_average_area(client, clause):
+    request = AggregateRequest(clause).group_by([], reducers.avg('@grossArea').alias("Average Gross Area"))
+    result = client.aggregate(request)
 
+    #extract result from nested dictionary
+    d_result = result["results"][0]
+    average_area = d_result["extra_attributes"]
+    
+    return average_area
+
+#Total room count metric ----  
+def calculate_total_count(client, clause):
+    query_result = client.search(Query(clause))
+
+    #extract result from nested dictionary
+    total_count= query_result["total_results"]
+
+    #- This can also be done by aggregate like this:
+    #request_totalCount = AggregateRequest(search_clause).group_by([], reducers.count().alias("Total Count"))
+
+    return total_count
+
+#Rooms and County metric ----  
+def calculate_rooms_and_county(client, clause):
+    request = AggregateRequest(clause).group_by(['@county', '@numberOfRooms',], reducers.count().alias("Total")).sort_by(Asc('@numberOfRooms'))
+    room_county_count = client.aggregate(request)
+
+    return room_county_count
